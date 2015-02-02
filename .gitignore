@@ -1,0 +1,8 @@
+cfn-pyplates/*.pyc
+config/prod-br-mysql.json
+config/export-env-vars.sh
+*.txt
+.ey_binlog*
+*.log
+.idea/*
+templates/*

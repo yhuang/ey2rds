@@ -1,0 +1,54 @@
+#!/bin/bash -e
+
+. $PWD/lib/common.sh
+
+function main {
+	if [ $# -lt 3 ]; then
+        exit_with_feedback "cfn <create|update> <stack_name> <num_replicas> [param_key=param_value]"
+    fi
+
+	local action=$1; shift
+	local stack_name=$1; shift
+	local num_replicas=$1; shift
+
+	echo "Generating CloudFormation templates..."
+	echo
+	bin/generate-templates.sh $stack_name $num_replicas
+
+	local cfn_path=br-ops/cfn-templates/ey2rds/$stack_name.json
+	aws s3 cp $PWD/templates/$stack_name.json s3://$cfn_path
+
+	local parameters=$1
+
+	case "$action" in
+	  create)
+		parameters=`echo $parameters | lib/process-parameters.rb create $stack_name | tr -d \"`
+
+		echo "Creating ${stack_name}..."
+		echo
+	    aws cloudformation create-stack \
+	    --stack-name $stack_name \
+	    --template-url https://s3.amazonaws.com/$cfn_path \
+	    --parameters $parameters \
+	    --capabilities CAPABILITY_IAM \
+	    --stack-policy-body file://$PWD/config/stack_update_policy.json \
+	    --on-failure DO_NOTHING
+	    ;;
+	  update)
+		parameters=`echo $parameters | lib/process-parameters.rb update $stack_name | tr -d \"`
+
+		echo "Updating ${stack_name}..."
+		echo	    
+	    aws cloudformation update-stack \
+	    --stack-name $stack_name \
+	    --template-url https://s3.amazonaws.com/$cfn_path \
+	    --parameters $parameters ParameterKey=DBInstanceClass,UsePreviousValue=true \
+	    --capabilities CAPABILITY_IAM
+	    ;;
+	  *)
+		exit_with_feedback "cfn <create|update> <stack_name> <number_of_replicas> [param_key=param_value]"
+	    ;;
+	esac
+}
+
+main "$@"

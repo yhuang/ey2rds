@@ -1,0 +1,19 @@
+code:
+  image: debian:jessie
+  volumes:
+    - $HOME/src/ey2rds:/app
+credentials:
+  image: debian:jessie
+  volumes:
+    - $HOME/.aws:/home/docker/.aws
+    - $HOME/.ssh:/home/docker/.ssh
+composer:
+  image: bleacher/ey2rds
+  volumes_from:
+    - code
+    - credentials
+  environment:
+    - BR_DATABASE_USER
+    - BR_DATABASE_USER_PASSWORD
+    - REPLICATION_USER
+    - REPLICATION_USER_PASSWORD
